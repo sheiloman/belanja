@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Belanja</title>
+    <!-- Memuat Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Style kustom untuk font dan elemen lainnya */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Style untuk modal agar muncul di tengah */
+        .modal {
+            display: none; /* Sembunyikan secara default */
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex; /* Tampilkan saat kelas 'show' ditambahkan */
+        }
+
+        /* Style khusus untuk mencetak */
+        @media print {
+            /* Sembunyikan semua elemen kecuali konten struk */
+            body > *:not(#receipt-content-wrapper) {
+                display: none !important;
+            }
+            /* Pastikan wrapper dan kontennya terlihat dan menempati seluruh halaman */
+            #receipt-content-wrapper, #receipt-content-wrapper > * {
+                display: block !important;
+                visibility: visible !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+    </style>
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Inconsolata&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+
+    <!-- Konten Utama Aplikasi -->
+    <div class="container mx-auto max-w-2xl p-4 sm:p-6">
+        <header class="relative text-center mb-6">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">Daftar Belanja</h1>
+            <p class="text-gray-600">Pilih bahan yang dibutuhkan.</p>
+            <button id="open-settings-btn" class="absolute top-0 right-0 p-2 text-gray-600 hover:text-blue-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+            </button>
+        </header>
+
+        <main id="shopping-list-container" class="bg-white p-6 rounded-xl shadow-md">
+            <!-- Daftar belanja akan dirender oleh JavaScript di sini -->
+        </main>
+
+        <footer class="mt-6 text-center">
+            <button id="open-preview-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed">
+                Lihat Struk & Cetak
+            </button>
+        </footer>
+    </div>
+
+    <!-- Modal Pengaturan -->
+    <div id="settings-modal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <header class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-800">Pengaturan Daftar Belanja</h2>
+                <button id="close-settings-btn" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+            </header>
+            <div class="p-6 overflow-y-auto">
+                <form id="item-form" class="bg-gray-50 p-4 rounded-lg mb-6">
+                    <h3 id="form-title" class="font-semibold text-lg mb-2">Tambah Item Baru</h3>
+                    <input type="hidden" id="item-id">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" id="item-name" placeholder="Nama Item" class="p-2 border rounded-md" required>
+                        <input type="number" id="item-price" placeholder="Harga" class="p-2 border rounded-md" required>
+                        <select id="item-category" class="p-2 border rounded-md col-span-1 md:col-span-2">
+                            <!-- Opsi kategori akan dirender oleh JavaScript -->
+                        </select>
+                        <input type="text" id="new-category-name" placeholder="Nama Kategori Baru" class="p-2 border rounded-md hidden col-span-1 md:col-span-2">
+                    </div>
+                    <div class="flex justify-end items-center mt-4 gap-2">
+                        <button type="button" id="cancel-edit-btn" class="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 hidden">Batal Edit</button>
+                        <button type="submit" id="save-item-btn" class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">Tambah Item</button>
+                    </div>
+                </form>
+                <div id="settings-item-list" class="space-y-2">
+                    <!-- Daftar item untuk diedit/dihapus akan dirender di sini -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Pratinjau Struk -->
+    <div id="preview-modal" class="modal">
+         <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <header class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-800">Pratinjau Struk</h2>
+                <button id="close-preview-btn" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+            </header>
+            <div id="receipt-content-preview" class="p-6 overflow-y-auto bg-white text-black" style="font-family: 'Inconsolata', monospace;">
+                <!-- Konten struk untuk pratinjau akan dirender di sini -->
+            </div>
+            <footer class="p-4 border-t flex justify-end gap-2">
+                <button id="copy-html-btn" class="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 min-w-[120px]">Salin HTML</button>
+                <button id="print-btn" class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">Cetak</button>
+            </footer>
+        </div>
+    </div>
+    
+    <!-- Wrapper untuk konten yang akan dicetak -->
+    <div id="receipt-content-wrapper" class="hidden print:block">
+        <!-- Konten untuk dicetak akan dirender oleh JavaScript di sini -->
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DATA STATE ---
+            let ingredients = [
+                { id: 1, category: 'Mama Naura', name: 'Tepung Terigu', price: 15000, quantity: 0 },
+                { id: 2, category: 'Mama Naura', name: 'Gula Pasir', price: 18000, quantity: 0 },
+                { id: 3, category: 'Mama Naura', name: 'Telur Ayam', price: 2500, quantity: 0 },
+                { id: 4, category: 'Mama Naura', name: 'Ragi & Baking Powder', price: 11000, quantity: 0 },
+                { id: 5, category: 'Mama Naura', name: 'Margarin', price: 8000, quantity: 0 },
+                { id: 9, category: 'Mama Naura', name: 'Keju Cheddar', price: 25000, quantity: 0 },
+                { id: 10, category: 'Mama Naura', name: 'Cokelat Meises', price: 12000, quantity: 0 },
+                { id: 11, category: 'Mama Naura', name: 'Kacang Tanah', price: 15000, quantity: 0 },
+                { id: 13, category: 'Mama Naura', name: 'Susu Kental Manis', price: 13000, quantity: 0 },
+                { id: 15, category: 'Sayur & Ikan', name: 'Tepung Terigu', price: 16000, quantity: 0 },
+                { id: 16, category: 'Sayur & Ikan', name: 'Telur Bebek / Ayam', price: 3500, quantity: 0 },
+                { id: 17, category: 'Sayur & Ikan', name: 'Daging Giling', price: 40000, quantity: 0 },
+                { id: 18, category: 'Sayur & Ikan', name: 'Daun Bawang', price: 5000, quantity: 0 },
+                { id: 19, category: 'Sayur & Ikan', name: 'Bawang Bombay & Putih', price: 10000, quantity: 0 },
+                { id: 21, category: 'Sayur & Ikan', name: 'Bumbu Kari', price: 6000, quantity: 0 },
+                { id: 22, category: 'Sayur & Ikan', name: 'Garam & Lada', price: 4000, quantity: 0 },
+                { id: 23, category: 'Sayur & Ikan', name: 'Minyak Goreng', price: 20000, quantity: 0 },
+                { id: 24, category: 'Kemasan', name: 'Kardus Martabak', price: 2000, quantity: 0 },
+                { id: 25, category: 'Kemasan', name: 'Kertas Roti / Alas', price: 10000, quantity: 0 },
+                { id: 26, category: 'Kemasan', name: 'Kantong Plastik', price: 5000, quantity: 0 },
+                { id: 27, category: 'Lain-lain', name: 'Gas LPG 3kg', price: 25000, quantity: 0 },
+                { id: 28, category: 'Lain-lain', name: 'Tisu & Lap', price: 12000, quantity: 0 },
+            ];
+
+            // --- GET ELEMENTS ---
+            const shoppingListContainer = document.getElementById('shopping-list-container');
+            const openSettingsBtn = document.getElementById('open-settings-btn');
+            const settingsModal = document.getElementById('settings-modal');
+            const closeSettingsBtn = document.getElementById('close-settings-btn');
+            const itemForm = document.getElementById('item-form');
+            const settingsItemList = document.getElementById('settings-item-list');
+            const openPreviewBtn = document.getElementById('open-preview-btn');
+            const previewModal = document.getElementById('preview-modal');
+            const closePreviewBtn = document.getElementById('close-preview-btn');
+            const printBtn = document.getElementById('print-btn');
+            const copyHtmlBtn = document.getElementById('copy-html-btn');
+
+            // --- HELPER FUNCTIONS ---
+            const formatCurrency = (amount) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+
+            // --- RENDER FUNCTIONS ---
+            function renderApp() {
+                shoppingListContainer.innerHTML = ''; // Hapus konten lama
+
+                const groupedIngredients = ingredients.reduce((acc, item) => {
+                    (acc[item.category] = acc[item.category] || []).push(item);
+                    return acc;
+                }, {});
+
+                if (Object.keys(groupedIngredients).length === 0) {
+                     shoppingListContainer.innerHTML = `<p class="text-center text-gray-500 py-8">Daftar belanja kosong. Tambahkan item melalui menu pengaturan.</p>`;
+                } else {
+                    const sortedCategories = Object.keys(groupedIngredients).sort();
+                    for (const category of sortedCategories) {
+                        const items = groupedIngredients[category].sort((a,b) => a.name.localeCompare(b.name));
+                        
+                        const section = document.createElement('section');
+                        section.className = 'mb-6';
+                        
+                        let itemsHTML = '';
+                        items.forEach(item => {
+                            itemsHTML += `
+                                <div class="flex items-center justify-between p-3 rounded-lg transition-colors duration-200 ${item.quantity > 0 ? 'bg-blue-50' : 'bg-gray-50'}">
+                                    <div>
+                                        <p class="text-gray-800 font-medium">${item.name}</p>
+                                        <p class="text-sm text-gray-500">${formatCurrency(item.price)}</p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button data-id="${item.id}" data-delta="-1" class="quantity-btn w-8 h-8 flex items-center justify-center bg-gray-200 rounded-full font-bold text-xl text-gray-700 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed" ${item.quantity === 0 ? 'disabled' : ''}>-</button>
+                                        <span class="w-10 text-center text-lg font-semibold">${item.quantity}</span>
+                                        <button data-id="${item.id}" data-delta="1" class="quantity-btn w-8 h-8 flex items-center justify-center bg-gray-200 rounded-full font-bold text-xl text-gray-700 hover:bg-gray-300">+</button>
+                                    </div>
+                                </div>
+                            `;
+                        });
+
+                        section.innerHTML = `
+                            <h2 class="text-xl font-semibold mb-3 text-gray-700 border-b pb-2">${category}</h2>
+                            <div class="space-y-2">${itemsHTML}</div>
+                        `;
+                        shoppingListContainer.appendChild(section);
+                    }
+                }
+                
+                // Update total
+                const totalPrice = ingredients.reduce((total, item) => total + (item.price * item.quantity), 0);
+                let totalEl = shoppingListContainer.querySelector('.total-price-container');
+                if (!totalEl) {
+                    totalEl = document.createElement('div');
+                    totalEl.className = 'total-price-container mt-6 pt-4 border-t text-right';
+                    shoppingListContainer.appendChild(totalEl);
+                }
+
+                if (totalPrice > 0) {
+                     totalEl.innerHTML = `<span class="text-gray-600 font-semibold">Estimasi Total: </span><span class="text-xl font-bold text-blue-700">${formatCurrency(totalPrice)}</span>`;
+                } else {
+                    totalEl.innerHTML = '';
+                }
+               
+                openPreviewBtn.disabled = totalPrice === 0;
+            }
+
+            function renderSettingsModal() {
+                // Render daftar item di pengaturan
+                settingsItemList.innerHTML = '';
+                const sortedIngredients = [...ingredients].sort((a,b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+                sortedIngredients.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'flex items-center justify-between bg-gray-100 p-3 rounded-md';
+                    itemDiv.innerHTML = `
+                        <div>
+                            <p class="font-semibold">${item.name}</p>
+                            <p class="text-sm text-gray-600">${formatCurrency(item.price)} - (${item.category})</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button data-id="${item.id}" class="edit-item-btn text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                            <button data-id="${item.id}" class="delete-item-btn text-red-600 hover:text-red-800 font-medium">Hapus</button>
+                        </div>
+                    `;
+                    settingsItemList.appendChild(itemDiv);
+                });
+                
+                // Render kategori di dropdown
+                const categorySelect = document.getElementById('item-category');
+                const uniqueCategories = [...new Set(ingredients.map(item => item.category))].sort();
+                categorySelect.innerHTML = uniqueCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                categorySelect.innerHTML += `<option value="__NEW__">-- Buat Kategori Baru --</option>`;
+            }
+
+            function renderPreviewModal() {
+                const receiptPreviewContainer = document.getElementById('receipt-content-preview');
+                const receiptPrintContainer = document.getElementById('receipt-content-wrapper');
+                const itemsToPrint = ingredients.filter(item => item.quantity > 0);
+                const total = ingredients.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                const date = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+
+                let receiptHTML = `
+                    <div class="text-center mb-4">
+                        <h3 class="text-2xl font-bold">DAFTAR BELANJA</h3>
+                        <p class="text-sm">AYESHA</p>
+                        <p class="text-sm">${date}</p>
+                    </div>
+                    <div class="border-t border-b border-dashed border-black py-2 my-2">
+                        ${itemsToPrint.map(item => `
+                            <div class="flex justify-between text-sm mb-1">
+                                <div class="flex-1">
+                                    <p>${item.name}</p>
+                                    <p class="pl-2">${item.quantity} x ${formatCurrency(item.price)}</p>
+                                </div>
+                                <p class="text-right">${formatCurrency(item.quantity * item.price)}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="flex justify-between font-bold text-lg mt-2">
+                        <p>TOTAL</p>
+                        <p>${formatCurrency(total)}</p>
+                    </div>
+                    <div class="text-center mt-6 text-sm">
+                        <p>--- Semoga Laris Manis ---</p>
+                    </div>
+                `;
+                // Untuk pratinjau
+                receiptPreviewContainer.innerHTML = receiptHTML;
+                // Untuk dicetak
+                receiptPrintContainer.innerHTML = `<div class="p-6 bg-white text-black" style="font-family: 'Inconsolata', monospace;">${receiptHTML}</div>`;
+            }
+
+            // --- EVENT HANDLERS ---
+            shoppingListContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('quantity-btn')) {
+                    const id = parseInt(e.target.dataset.id);
+                    const delta = parseInt(e.target.dataset.delta);
+                    const item = ingredients.find(i => i.id === id);
+                    if (item) {
+                        item.quantity = Math.max(0, item.quantity + delta);
+                        renderApp();
+                    }
+                }
+            });
+
+            openSettingsBtn.addEventListener('click', () => {
+                renderSettingsModal();
+                settingsModal.classList.add('show');
+            });
+
+            closeSettingsBtn.addEventListener('click', () => {
+                settingsModal.classList.remove('show');
+            });
+
+            itemForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = document.getElementById('item-id').value;
+                const name = document.getElementById('item-name').value;
+                const price = parseInt(document.getElementById('item-price').value);
+                let category = document.getElementById('item-category').value;
+                
+                if (category === '__NEW__') {
+                    category = document.getElementById('new-category-name').value;
+                }
+
+                if (!name || isNaN(price) || price < 0 || !category) {
+                    alert('Nama, harga, dan kategori tidak boleh kosong.');
+                    return;
+                }
+
+                if (id) { // Editing
+                    const item = ingredients.find(i => i.id == id);
+                    item.name = name;
+                    item.price = price;
+                    item.category = category;
+                } else { // Adding
+                    const newItem = {
+                        id: Date.now(),
+                        name,
+                        price,
+                        category,
+                        quantity: 0
+                    };
+                    ingredients.push(newItem);
+                }
+                
+                itemForm.reset();
+                document.getElementById('item-id').value = '';
+                document.getElementById('form-title').textContent = 'Tambah Item Baru';
+                document.getElementById('save-item-btn').textContent = 'Tambah Item';
+                document.getElementById('cancel-edit-btn').classList.add('hidden');
+                document.getElementById('new-category-name').classList.add('hidden');
+                
+                renderSettingsModal();
+                renderApp();
+            });
+            
+            document.getElementById('item-category').addEventListener('change', (e) => {
+                const newCategoryInput = document.getElementById('new-category-name');
+                if (e.target.value === '__NEW__') {
+                    newCategoryInput.classList.remove('hidden');
+                    newCategoryInput.required = true;
+                } else {
+                    newCategoryInput.classList.add('hidden');
+                    newCategoryInput.required = false;
+                }
+            });
+
+            settingsItemList.addEventListener('click', (e) => {
+                const id = parseInt(e.target.dataset.id);
+                if (e.target.classList.contains('delete-item-btn')) {
+                    if (confirm('Apakah Anda yakin ingin menghapus item ini?')) {
+                        ingredients = ingredients.filter(i => i.id !== id);
+                        renderSettingsModal();
+                        renderApp();
+                    }
+                } else if (e.target.classList.contains('edit-item-btn')) {
+                    const item = ingredients.find(i => i.id === id);
+                    document.getElementById('item-id').value = item.id;
+                    document.getElementById('item-name').value = item.name;
+                    document.getElementById('item-price').value = item.price;
+                    document.getElementById('item-category').value = item.category;
+                    document.getElementById('form-title').textContent = 'Edit Item';
+                    document.getElementById('save-item-btn').textContent = 'Simpan Perubahan';
+                    document.getElementById('cancel-edit-btn').classList.remove('hidden');
+                }
+            });
+            
+            document.getElementById('cancel-edit-btn').addEventListener('click', () => {
+                 itemForm.reset();
+                document.getElementById('item-id').value = '';
+                document.getElementById('form-title').textContent = 'Tambah Item Baru';
+                document.getElementById('save-item-btn').textContent = 'Tambah Item';
+                document.getElementById('cancel-edit-btn').classList.add('hidden');
+            });
+
+            openPreviewBtn.addEventListener('click', () => {
+                renderPreviewModal();
+                previewModal.classList.add('show');
+            });
+
+            closePreviewBtn.addEventListener('click', () => {
+                previewModal.classList.remove('show');
+            });
+
+            printBtn.addEventListener('click', () => {
+                window.print();
+                previewModal.classList.remove('show');
+                // Reset quantities
+                ingredients.forEach(item => item.quantity = 0);
+                renderApp();
+            });
+
+            copyHtmlBtn.addEventListener('click', () => {
+                const itemsToPrint = ingredients.filter(item => item.quantity > 0);
+                const total = ingredients.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                const date = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+
+                let html = `<div style="font-family: monospace; color: black; background: white; padding: 16px; width: 300px; border: 1px solid #ccc;">`;
+                html += `<div style="text-align: center;">`;
+                html += `<h3 style="font-size: 20px; font-weight: bold; margin: 0;">DAFTAR BELANJA</h3>`;
+                html += `<p style="font-size: 14px; margin: 0;">AYESHA</p>`;
+                html += `<p style="font-size: 14px; margin: 0;">${date}</p>`;
+                html += `</div>`;
+                html += `<hr style="border: none; border-top: 1px dashed black; margin: 8px 0;">`;
+                
+                itemsToPrint.forEach(item => {
+                  html += `<div style="display: flex; justify-content: space-between; font-size: 14px;">`;
+                  html += `<div><p style="margin: 0;">${item.name}</p><p style="margin: 0 0 0 8px;">${item.quantity} x ${formatCurrency(item.price)}</p></div>`;
+                  html += `<p style="margin: 0;">${formatCurrency(item.quantity * item.price)}</p>`;
+                  html += `</div>`;
+                });
+
+                html += `<hr style="border: none; border-top: 1px dashed black; margin: 8px 0;">`;
+                html += `<div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px;">`;
+                html += `<p style="margin: 0;">TOTAL</p>`;
+                html += `<p style="margin: 0;">${formatCurrency(total)}</p>`;
+                html += `</div>`;
+                html += `<div style="text-align: center; margin-top: 16px; font-size: 14px;">`;
+                html += `<p style="margin: 0;">--- Semoga Laris Manis ---</p>`;
+                html += `</div>`;
+                html += `</div>`;
+
+                const textArea = document.createElement("textarea");
+                textArea.value = html;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    copyHtmlBtn.textContent = 'Tersalin!';
+                    setTimeout(() => copyHtmlBtn.textContent = 'Salin HTML', 2000);
+                } catch (err) {
+                    console.error('Gagal menyalin HTML: ', err);
+                    copyHtmlBtn.textContent = 'Gagal';
+                }
+                document.body.removeChild(textArea);
+            });
+
+            // --- INITIAL RENDER ---
+            renderApp();
+        });
+    </script>
+</body>
+</html>

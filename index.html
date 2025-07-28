@@ -78,6 +78,11 @@
             </div>
         </header>
 
+        <!-- Kolom Pencarian -->
+        <div class="mb-6">
+            <input type="text" id="search-input" placeholder="Cari item..." class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
         <main id="shopping-list-container" class="bg-white p-6 rounded-xl shadow-md">
             <!-- Daftar belanja akan dirender oleh JavaScript di sini -->
         </main>
@@ -97,6 +102,11 @@
                 <button id="close-settings-btn" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
             </header>
             <div class="p-6 overflow-y-auto">
+                <!-- Pencarian di Pengaturan -->
+                <div class="mb-4">
+                    <input type="text" id="settings-search-input" placeholder="Cari item untuk diedit..." class="w-full p-2 border rounded-md">
+                </div>
+                
                 <form id="item-form" class="bg-gray-50 p-4 rounded-lg mb-6">
                     <h3 id="form-title" class="font-semibold text-lg mb-2">Tambah Item Baru</h3>
                     <input type="hidden" id="item-id">
@@ -107,12 +117,25 @@
                             <!-- Opsi kategori akan dirender oleh JavaScript -->
                         </select>
                         <input type="text" id="new-category-name" placeholder="Nama Kategori Baru" class="p-2 border rounded-md hidden col-span-1 md:col-span-2">
+                        
+                        <!-- Kolom Satuan Baru -->
+                        <select id="item-unit-type" class="p-2 border rounded-md">
+                            <option value="Pcs">Pcs</option>
+                            <option value="Kg">Kg</option>
+                        </select>
+                        <select id="item-unit-value" class="p-2 border rounded-md hidden">
+                            <option value="">1 Kg</option>
+                            <option value="100gr">100 gram</option>
+                            <option value="1/4">1/4 Kg</option>
+                            <option value="1/2">1/2 Kg</option>
+                        </select>
                     </div>
                     <div class="flex justify-end items-center mt-4 gap-2">
                         <button type="button" id="cancel-edit-btn" class="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 hidden">Batal Edit</button>
                         <button type="submit" id="save-item-btn" class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">Tambah Item</button>
                     </div>
                 </form>
+                
                 <div id="settings-item-list" class="space-y-2">
                     <!-- Daftar item untuk diedit/dihapus akan dirender di sini -->
                 </div>
@@ -146,48 +169,51 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- DATA STATE ---
-            let ingredients = [
+            const initialIngredients = [
                 // Kategori Mama Naura
-                { id: 1, category: 'Mama Naura', name: 'Telur', price: 80000, quantity: 0 },
-                { id: 2, category: 'Mama Naura', name: 'Tepung', price: 13000, quantity: 0 },
-                { id: 3, category: 'Mama Naura', name: 'Gula', price: 19000, quantity: 0 },
-                { id: 4, category: 'Mama Naura', name: 'Minyak', price: 20000, quantity: 0 },
-                { id: 5, category: 'Mama Naura', name: 'Kacang', price: 30000, quantity: 0 },
-                { id: 6, category: 'Mama Naura', name: 'Blueben', price: 10000, quantity: 0 },
-                { id: 7, category: 'Mama Naura', name: 'Susu', price: 12500, quantity: 0 },
-                { id: 8, category: 'Mama Naura', name: 'Soda kue', price: 5000, quantity: 0 },
-                { id: 9, category: 'Mama Naura', name: 'Permipan', price: 5000, quantity: 0 },
-                { id: 10, category: 'Mama Naura', name: 'Garam', price: 5000, quantity: 0 },
-                { id: 11, category: 'Mama Naura', name: 'Ajinomoto', price: 6000, quantity: 0 },
-                { id: 12, category: 'Mama Naura', name: 'Morison', price: 7000, quantity: 0 },
-                { id: 13, category: 'Mama Naura', name: 'Bawang Merah', price: 16000, quantity: 0 },
-                { id: 14, category: 'Mama Naura', name: 'Bawang putih', price: 13000, quantity: 0 },
-                { id: 15, category: 'Mama Naura', name: 'Keju', price: 12500, quantity: 0 },
-                { id: 16, category: 'Mama Naura', name: 'Seres', price: 32000, quantity: 0 },
-                { id: 17, category: 'Mama Naura', name: 'Cuka', price: 20000, quantity: 0 },
-                { id: 18, category: 'Mama Naura', name: 'Royco sapi', price: 5000, quantity: 0 },
-                { id: 19, category: 'Mama Naura', name: 'Bumbu kari', price: 5000, quantity: 0 },
-                { id: 20, category: 'Mama Naura', name: 'Tisu', price: 10000, quantity: 0 },
+                { id: 1, category: 'Mama Naura', name: 'Telur', price: 80000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 2, category: 'Mama Naura', name: 'Tepung', price: 13000, quantity: 0, unitType: 'Kg', unitValue: '' },
+                { id: 3, category: 'Mama Naura', name: 'Gula', price: 19000, quantity: 0, unitType: 'Kg', unitValue: '' },
+                { id: 4, category: 'Mama Naura', name: 'Minyak', price: 20000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 5, category: 'Mama Naura', name: 'Kacang', price: 30000, quantity: 0, unitType: 'Kg', unitValue: '' },
+                { id: 6, category: 'Mama Naura', name: 'Blueben', price: 10000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 7, category: 'Mama Naura', name: 'Susu', price: 12500, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 8, category: 'Mama Naura', name: 'Soda kue', price: 5000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 9, category: 'Mama Naura', name: 'Permipan', price: 5000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 10, category: 'Mama Naura', name: 'Garam', price: 5000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 11, category: 'Mama Naura', name: 'Ajinomoto', price: 6000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 12, category: 'Mama Naura', name: 'Morison', price: 7000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 13, category: 'Mama Naura', name: 'Bawang Merah', price: 16000, quantity: 0, unitType: 'Kg', unitValue: '1/4' },
+                { id: 14, category: 'Mama Naura', name: 'Bawang putih', price: 13000, quantity: 0, unitType: 'Kg', unitValue: '1/4' },
+                { id: 15, category: 'Mama Naura', name: 'Keju', price: 12500, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 16, category: 'Mama Naura', name: 'Seres', price: 32000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 17, category: 'Mama Naura', name: 'Cuka', price: 20000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 18, category: 'Mama Naura', name: 'Royco sapi', price: 5000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 19, category: 'Mama Naura', name: 'Bumbu kari', price: 5000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 20, category: 'Mama Naura', name: 'Tisu', price: 10000, quantity: 0, unitType: 'Pcs', unitValue: '' },
 
                 // Kategori kemasan
-                { id: 21, category: 'kemasan', name: 'Kertas Nasi', price: 35000, quantity: 0 },
-                { id: 22, category: 'kemasan', name: 'Kotak R3', price: 45000, quantity: 0 },
-                { id: 23, category: 'kemasan', name: 'Kantong plastik tanggung', price: 10000, quantity: 0 },
-                { id: 24, category: 'kemasan', name: 'Kantong plastik kecil', price: 10000, quantity: 0 },
-                { id: 25, category: 'kemasan', name: 'Kantong plastik acar', price: 8000, quantity: 0 },
-                { id: 26, category: 'kemasan', name: 'Karet', price: 15000, quantity: 0 },
+                { id: 21, category: 'kemasan', name: 'Kertas Nasi', price: 35000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 22, category: 'kemasan', name: 'Kotak R3', price: 45000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 23, category: 'kemasan', name: 'Kantong plastik tanggung', price: 10000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 24, category: 'kemasan', name: 'Kantong plastik kecil', price: 10000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 25, category: 'kemasan', name: 'Kantong plastik acar', price: 8000, quantity: 0, unitType: 'Pcs', unitValue: '' },
+                { id: 26, category: 'kemasan', name: 'Karet', price: 15000, quantity: 0, unitType: 'Pcs', unitValue: '' },
 
                 // Kategori Sayuran & ikan
-                { id: 27, category: 'Sayuran & ikan', name: 'Timun', price: 7000, quantity: 0 },
-                { id: 28, category: 'Sayuran & ikan', name: 'Kol', price: 14000, quantity: 0 },
-                { id: 29, category: 'Sayuran & ikan', name: 'Daun bawang', price: 45000, quantity: 0 },
-                { id: 30, category: 'Sayuran & ikan', name: 'Jahe', price: 10000, quantity: 0 },
-                { id: 31, category: 'Sayuran & ikan', name: 'Kunyit', price: 10000, quantity: 0 },
-                { id: 32, category: 'Sayuran & ikan', name: 'Daging Ayam', price: 100000, quantity: 0 },
+                { id: 27, category: 'Sayuran & ikan', name: 'Timun', price: 7000, quantity: 0, unitType: 'Kg', unitValue: '' },
+                { id: 28, category: 'Sayuran & ikan', name: 'Kol', price: 14000, quantity: 0, unitType: 'Kg', unitValue: '' },
+                { id: 29, category: 'Sayuran & ikan', name: 'Daun bawang', price: 45000, quantity: 0, unitType: 'Kg', unitValue: '' },
+                { id: 30, category: 'Sayuran & ikan', name: 'Jahe', price: 10000, quantity: 0, unitType: 'Kg', unitValue: '1/4' },
+                { id: 31, category: 'Sayuran & ikan', name: 'Kunyit', price: 10000, quantity: 0, unitType: 'Kg', unitValue: '1/4' },
+                { id: 32, category: 'Sayuran & ikan', name: 'Daging Ayam', price: 100000, quantity: 0, unitType: 'Kg', unitValue: '' },
 
                 // Kategori Lain-lain
-                { id: 33, category: 'Lain-lain', name: 'Gas LPG 3kg', price: 40000, quantity: 0 },
+                { id: 33, category: 'Lain-lain', name: 'Gas LPG 3kg', price: 40000, quantity: 0, unitType: 'Pcs', unitValue: '' },
             ];
+
+            const STORAGE_KEY = 'shoppingListData';
+            let ingredients;
 
             // --- GET ELEMENTS ---
             const shoppingListContainer = document.getElementById('shopping-list-container');
@@ -202,21 +228,41 @@
             const closePreviewFooterBtn = document.getElementById('close-preview-footer-btn');
             const printBtn = document.getElementById('print-btn');
             const fullscreenBtn = document.getElementById('fullscreen-btn');
+            const searchInput = document.getElementById('search-input');
+            const settingsSearchInput = document.getElementById('settings-search-input');
 
             // --- HELPER FUNCTIONS ---
             const formatCurrency = (amount) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+            
+            const saveData = () => {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(ingredients));
+            };
+
+            const loadData = () => {
+                const savedData = localStorage.getItem(STORAGE_KEY);
+                if (savedData) {
+                    ingredients = JSON.parse(savedData);
+                } else {
+                    ingredients = initialIngredients;
+                }
+            };
 
             // --- RENDER FUNCTIONS ---
-            function renderApp() {
+            function renderApp(searchTerm = '') {
                 shoppingListContainer.innerHTML = ''; // Hapus konten lama
+                
+                const lowerCaseSearchTerm = searchTerm.toLowerCase();
+                const filteredIngredients = ingredients.filter(item => 
+                    item.name.toLowerCase().includes(lowerCaseSearchTerm)
+                );
 
-                const groupedIngredients = ingredients.reduce((acc, item) => {
+                const groupedIngredients = filteredIngredients.reduce((acc, item) => {
                     (acc[item.category] = acc[item.category] || []).push(item);
                     return acc;
                 }, {});
 
                 if (Object.keys(groupedIngredients).length === 0) {
-                     shoppingListContainer.innerHTML = `<p class="text-center text-gray-500 py-8">Daftar belanja kosong. Tambahkan item melalui menu pengaturan.</p>`;
+                     shoppingListContainer.innerHTML = `<p class="text-center text-gray-500 py-8">Item tidak ditemukan.</p>`;
                 } else {
                     const categoryOrder = ['Mama Naura', 'kemasan', 'Sayuran & ikan', 'Lain-lain'];
                     
@@ -236,11 +282,22 @@
                         
                         let itemsHTML = '';
                         items.forEach(item => {
+                            let displayUnit = item.unitType;
+                            if (item.unitType === 'Kg') {
+                                if (item.unitValue === '100gr') {
+                                    displayUnit = '100 gram';
+                                } else if (item.unitValue) {
+                                    displayUnit = `${item.unitValue} Kg`;
+                                } else {
+                                    displayUnit = 'Kg';
+                                }
+                            }
+
                             itemsHTML += `
                                 <div class="flex items-center justify-between p-3 rounded-lg transition-colors duration-200 ${item.quantity > 0 ? 'bg-yellow-200' : 'bg-yellow-100'}">
                                     <div>
                                         <p class="text-gray-800 font-medium">${item.name}</p>
-                                        <p class="text-sm text-gray-600">${formatCurrency(item.price)}</p>
+                                        <p class="text-sm text-gray-600">${formatCurrency(item.price)} / ${displayUnit}</p>
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <button data-id="${item.id}" data-delta="-1" class="quantity-btn w-8 h-8 flex items-center justify-center bg-gray-200 rounded-full font-bold text-xl text-gray-700 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed" ${item.quantity === 0 ? 'disabled' : ''}>-</button>
@@ -276,16 +333,31 @@
                 openPreviewBtn.disabled = totalPrice === 0;
             }
 
-            function renderSettingsModal() {
+            function renderSettingsModal(searchTerm = '') {
+                const lowerCaseSearchTerm = searchTerm.toLowerCase();
+                const filteredIngredients = ingredients.filter(item => 
+                    item.name.toLowerCase().includes(lowerCaseSearchTerm)
+                );
+
                 settingsItemList.innerHTML = '';
-                const sortedIngredients = [...ingredients].sort((a,b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+                const sortedIngredients = filteredIngredients.sort((a,b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
                 sortedIngredients.forEach(item => {
+                    let displayUnit = item.unitType;
+                     if (item.unitType === 'Kg') {
+                        if (item.unitValue === '100gr') {
+                            displayUnit = '100 gram';
+                        } else if (item.unitValue) {
+                            displayUnit = `${item.unitValue} Kg`;
+                        } else {
+                            displayUnit = 'Kg';
+                        }
+                    }
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'flex items-center justify-between bg-gray-100 p-3 rounded-md';
                     itemDiv.innerHTML = `
                         <div>
                             <p class="font-semibold">${item.name}</p>
-                            <p class="text-sm text-gray-600">${formatCurrency(item.price)} - (${item.category})</p>
+                            <p class="text-sm text-gray-600">${formatCurrency(item.price)} / ${displayUnit} - (${item.category})</p>
                         </div>
                         <div class="flex gap-2">
                             <button data-id="${item.id}" class="edit-item-btn text-blue-600 hover:text-blue-800 font-medium">Edit</button>
@@ -333,7 +405,7 @@
                     </div>
                 `;
                 receiptPreviewContainer.innerHTML = receiptHTML;
-                receiptPrintContainer.innerHTML = receiptHTML; // Konten untuk dicetak sama dengan pratinjau
+                receiptPrintContainer.innerHTML = receiptHTML;
             }
 
             // --- EVENT HANDLERS ---
@@ -345,12 +417,13 @@
                     const item = ingredients.find(i => i.id === id);
                     if (item) {
                         item.quantity = Math.max(0, item.quantity + delta);
-                        renderApp();
+                        renderApp(searchInput.value); // Tetap filter saat mengubah kuantitas
                     }
                 }
             });
 
             openSettingsBtn.addEventListener('click', () => {
+                settingsSearchInput.value = '';
                 renderSettingsModal();
                 settingsModal.classList.add('show');
             });
@@ -365,11 +438,12 @@
                 const name = document.getElementById('item-name').value;
                 const price = parseInt(document.getElementById('item-price').value);
                 let category = document.getElementById('item-category').value;
-                
-                if (category === '__NEW__') {
-                    category = document.getElementById('new-category-name').value;
+                const unitType = document.getElementById('item-unit-type').value;
+                let unitValue = '';
+                if (unitType === 'Kg') {
+                    unitValue = document.getElementById('item-unit-value').value;
                 }
-
+                
                 if (!name || isNaN(price) || price < 0 || !category) {
                     alert('Nama, harga, dan kategori tidak boleh kosong.');
                     return;
@@ -380,23 +454,25 @@
                     item.name = name;
                     item.price = price;
                     item.category = category;
+                    item.unitType = unitType;
+                    item.unitValue = unitValue;
                 } else {
                     const newItem = {
                         id: Date.now(),
-                        name,
-                        price,
-                        category,
+                        name, price, category, unitType, unitValue,
                         quantity: 0
                     };
                     ingredients.push(newItem);
                 }
                 
+                saveData();
                 itemForm.reset();
                 document.getElementById('item-id').value = '';
                 document.getElementById('form-title').textContent = 'Tambah Item Baru';
                 document.getElementById('save-item-btn').textContent = 'Tambah Item';
                 document.getElementById('cancel-edit-btn').classList.add('hidden');
                 document.getElementById('new-category-name').classList.add('hidden');
+                document.getElementById('item-unit-value').classList.add('hidden');
                 
                 renderSettingsModal();
                 renderApp();
@@ -413,6 +489,15 @@
                 }
             });
 
+            document.getElementById('item-unit-type').addEventListener('change', (e) => {
+                const unitValueSelect = document.getElementById('item-unit-value');
+                if (e.target.value === 'Kg') {
+                    unitValueSelect.classList.remove('hidden');
+                } else {
+                    unitValueSelect.classList.add('hidden');
+                }
+            });
+
             settingsItemList.addEventListener('click', (e) => {
                 const target = e.target.closest('button');
                 if (!target) return;
@@ -421,7 +506,8 @@
                 if (target.classList.contains('delete-item-btn')) {
                     if (confirm('Apakah Anda yakin ingin menghapus item ini?')) {
                         ingredients = ingredients.filter(i => i.id !== id);
-                        renderSettingsModal();
+                        saveData();
+                        renderSettingsModal(settingsSearchInput.value);
                         renderApp();
                     }
                 } else if (target.classList.contains('edit-item-btn')) {
@@ -430,6 +516,16 @@
                     document.getElementById('item-name').value = item.name;
                     document.getElementById('item-price').value = item.price;
                     document.getElementById('item-category').value = item.category;
+                    document.getElementById('item-unit-type').value = item.unitType;
+                    
+                    const unitValueSelect = document.getElementById('item-unit-value');
+                    if (item.unitType === 'Kg') {
+                        unitValueSelect.classList.remove('hidden');
+                        unitValueSelect.value = item.unitValue;
+                    } else {
+                        unitValueSelect.classList.add('hidden');
+                    }
+
                     document.getElementById('form-title').textContent = 'Edit Item';
                     document.getElementById('save-item-btn').textContent = 'Simpan Perubahan';
                     document.getElementById('cancel-edit-btn').classList.remove('hidden');
@@ -442,6 +538,7 @@
                 document.getElementById('form-title').textContent = 'Tambah Item Baru';
                 document.getElementById('save-item-btn').textContent = 'Tambah Item';
                 document.getElementById('cancel-edit-btn').classList.add('hidden');
+                document.getElementById('item-unit-value').classList.add('hidden');
             });
 
             openPreviewBtn.addEventListener('click', () => {
@@ -479,7 +576,16 @@
                 }
             });
 
-            // --- INITIAL RENDER ---
+            searchInput.addEventListener('input', (e) => {
+                renderApp(e.target.value);
+            });
+
+            settingsSearchInput.addEventListener('input', (e) => {
+                renderSettingsModal(e.target.value);
+            });
+
+            // --- INITIAL LOAD & RENDER ---
+            loadData();
             renderApp();
         });
     </script>

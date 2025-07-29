@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Manajemen Gudang</title>
+    <!-- Memuat Tailwind CSS untuk styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Memuat Lucide Icons untuk ikon -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Style tambahan untuk transisi yang mulus */
+        .page {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+        .page.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Style untuk popup notifikasi */
+        #notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            z-index: 1050; /* Di atas modal overlay */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+        }
+        #notification.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+        #notification.bg-success { background-color: #28a745; }
+        #notification.bg-error { background-color: #dc3545; }
+        /* Mencegah panah di input number */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+
+        /* CSS KHUSUS UNTUK PRINT STRUK */
+        @media print {
+            /* Sembunyikan semua elemen kecuali kontainer struk */
+            body > *:not(#struk-container) {
+                display: none;
+            }
+            /* Pastikan kontainer struk terlihat dan menempati seluruh halaman */
+            #struk-container {
+                display: block !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+            }
+            /* Atur agar tidak ada margin dari browser */
+            @page {
+                margin: 10mm;
+                size: 80mm auto; /* Ukuran kertas thermal printer umum */
+            }
+        }
+    </style>
+</head>
+<body class="bg-sky-100 font-sans">
+
+    <div class="container mx-auto p-4 md:p-6 max-w-4xl">
+
+        <!-- Notifikasi Kustom -->
+        <div id="notification"></div>
+
+        <!-- ====================================================== -->
+        <!--                     HALAMAN AWAL (KASIR)               -->
+        <!-- ====================================================== -->
+        <div id="halaman-awal" class="page active space-y-6">
+            <header class="flex justify-between items-center pb-4 border-b">
+                <h1 class="text-3xl font-bold text-gray-800">Kasir</h1>
+                <button id="btn-ke-gudang" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition duration-300">
+                    Ke Gudang
+                </button>
+            </header>
+
+            <!-- Kolom Pencarian Barang -->
+            <div class="relative">
+                <label for="search-kasir" class="block text-sm font-medium text-gray-700 mb-1">Cari Barang</label>
+                <input type="text" id="search-kasir" placeholder="Ketik nama barang..." class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <div id="popup-kasir" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 shadow-lg hidden max-h-60 overflow-y-auto">
+                    <!-- Hasil pencarian akan muncul di sini -->
+                </div>
+            </div>
+
+            <!-- Keranjang Belanja -->
+            <div>
+                <h2 class="text-2xl font-semibold text-gray-700 mb-3">Keranjang Belanja</h2>
+                <div class="bg-white rounded-lg shadow-md">
+                    <div id="keranjang-list" class="p-4 min-h-[150px] space-y-3">
+                        <p id="keranjang-kosong" class="text-gray-500">Keranjang masih kosong.</p>
+                        <!-- Item keranjang akan ditambahkan di sini -->
+                    </div>
+                    <div id="keranjang-footer" class="p-4 bg-gray-50 border-t rounded-b-lg flex justify-between items-center">
+                        <div>
+                            <span class="text-lg font-bold text-gray-800">Total</span>
+                            <p id="total-harga" class="text-xl font-bold text-blue-600">Rp 0</p>
+                        </div>
+                        <button id="btn-pratinjau-struk" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-green-700 transition duration-300 flex items-center gap-2">
+                            <i data-lucide="printer" class="w-5 h-5"></i>
+                            Cetak Struk
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====================================================== -->
+        <!--                     HALAMAN GUDANG                     -->
+        <!-- ====================================================== -->
+        <div id="halaman-gudang" class="page space-y-6">
+            <header class="flex justify-between items-center pb-4 border-b">
+                 <button id="btn-kembali-ke-awal" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-300">
+                    &larr; Kembali
+                </button>
+                <h1 class="text-3xl font-bold text-gray-800">Gudang Barang</h1>
+                <button id="btn-ke-pengaturan" class="p-2 rounded-full hover:bg-gray-200 transition duration-300">
+                    <i data-lucide="settings" class="text-gray-600"></i>
+                </button>
+            </header>
+            <div>
+                <label for="search-gudang" class="block text-sm font-medium text-gray-700 mb-1">Cari Cepat di Gudang</label>
+                <input type="text" id="search-gudang" placeholder="Cari barang di gudang..." class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <h2 class="text-2xl font-semibold text-gray-700 mb-3">Semua Barang</h2>
+                <div id="list-barang-gudang" class="space-y-3"></div>
+            </div>
+        </div>
+        <!-- ====================================================== -->
+        <!--                   HALAMAN PENGATURAN                   -->
+        <!-- ====================================================== -->
+        <div id="halaman-pengaturan" class="page space-y-6">
+            <header class="flex justify-between items-center pb-4 border-b">
+                <h1 class="text-3xl font-bold text-gray-800">Pengaturan Barang</h1>
+                <button id="btn-kembali-ke-gudang" class="bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-700 transition duration-300">
+                    Kembali ke Gudang
+                </button>
+            </header>
+
+            <!-- Form Tambah Barang Baru -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">Tambah Barang Baru</h3>
+                <form id="form-tambah" class="space-y-4">
+                    <div>
+                        <label for="tambah-nama-barang" class="block text-sm font-medium text-gray-700">Nama Barang</label>
+                        <input type="text" id="tambah-nama-barang" placeholder="Contoh: Teh Pucuk Harum" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label for="tambah-harga-barang" class="block text-sm font-medium text-gray-700">Harga (Rp)</label>
+                        <input type="number" id="tambah-harga-barang" placeholder="Contoh: 3500" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label for="tambah-satuan-barang" class="block text-sm font-medium text-gray-700">Satuan</label>
+                        <select id="tambah-satuan-barang" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500">
+                            <option value="pcs">pcs</option>
+                            <option value="botol">botol</option>
+                            <option value="kaleng">kaleng</option>
+                            <option value="renteng">renteng</option>
+                            <option value="dus">dus</option>
+                            <option value="bal">bal</option>
+                            <option value="liter">liter</option>
+                            <optgroup label="Berat">
+                                <option value="kg">kg</option>
+                                <option value="1/2kg">1/2 kg</option>
+                                <option value="1/4kg">1/4 kg</option>
+                                <option value="100gr">100 gr</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-green-700 transition duration-300">
+                            Simpan Barang
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <hr class="my-8 border-t-2 border-dashed">
+
+            <!-- Form Edit Barang -->
+            <div>
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">Edit Barang yang Ada</h3>
+                 <div class="relative">
+                    <label for="search-edit" class="block text-sm font-medium text-gray-700 mb-1">Cari Barang untuk Diedit</label>
+                    <input type="text" id="search-edit" placeholder="Ketik nama barang yang ingin diubah..." class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500">
+                    <div id="popup-edit" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 shadow-lg hidden max-h-60 overflow-y-auto"></div>
+                </div>
+                <div id="form-edit-container" class="bg-white p-6 rounded-lg shadow-md mt-4 hidden">
+                    <h4 class="text-lg font-semibold mb-4 text-gray-700">Detail Barang</h4>
+                    <form id="form-edit" class="space-y-4">
+                        <input type="hidden" id="edit-item-id">
+                        <div>
+                            <label for="edit-nama-barang" class="block text-sm font-medium text-gray-700">Nama Barang</label>
+                            <input type="text" id="edit-nama-barang" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="edit-harga-barang" class="block text-sm font-medium text-gray-700">Harga (Rp)</label>
+                            <input type="number" id="edit-harga-barang" placeholder="Contoh: 5000" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="edit-satuan-barang" class="block text-sm font-medium text-gray-700">Satuan</label>
+                            <select id="edit-satuan-barang" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500">
+                                <option value="bal">bal</option>
+                                <option value="dus">dus</option>
+                                <option value="renteng">renteng</option>
+                                <option value="liter">liter</option>
+                                <option value="botol">botol</option>
+                                <option value="kaleng">kaleng</option>
+                                <option value="pcs">pcs</option>
+                                <optgroup label="Berat">
+                                    <option value="kg">kg</option>
+                                    <option value="1/2kg">1/2 kg</option>
+                                    <option value="1/4kg">1/4 kg</option>
+                                    <option value="100gr">100 gr</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="flex justify-end pt-2">
+                            <button type="submit" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">
+                                Simpan Perubahan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PRATINJAU STRUK -->
+    <div id="modal-pratinjau" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+            <h3 class="text-xl font-bold text-center mb-4">Pratinjau Struk</h3>
+            <div class="border rounded-md p-4 bg-gray-50 max-h-80 overflow-y-auto">
+                <div id="pratinjau-struk-content" class="font-mono text-xs"></div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button id="btn-tutup-modal" class="bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-400 transition">Tutup</button>
+                <button id="btn-konfirmasi-cetak" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                    Konfirmasi Cetak
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STRUK UNTUK DICETAK -->
+    <div id="struk-container" class="hidden">
+        <div id="struk-content" class="font-mono text-xs bg-white"></div>
+    </div>
+
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // ====================================================== //
+        //                  DATA SIMULASI & STATE                   //
+        // ====================================================== //
+        let gudang = [
+            { id: 1, nama: 'Indomie Goreng Original', satuan: 'dus', harga: 95000 },
+            { id: 2, nama: 'Susu Ultra Coklat 250ml', satuan: 'dus', harga: 120000 },
+            { id: 3, nama: 'Kopi Kapal Api Special Mix', satuan: 'renteng', harga: 13000 },
+            { id: 4, nama: 'Minyak Goreng Sania 1L', satuan: 'liter', harga: 18000 },
+            { id: 5, nama: 'Teh Botol Sosro Kotak', satuan: 'dus', harga: 65000 },
+            { id: 6, nama: 'Coca-cola 1.5L', satuan: 'botol', harga: 15000 },
+            { id: 7, nama: 'Sarden ABC', satuan: 'kaleng', harga: 9000 },
+            { id: 8, nama: 'Beras Pandan Wangi', satuan: 'kg', harga: 14000 },
+            { id: 9, nama: 'Telur Ayam Negeri', satuan: 'kg', harga: 28000 },
+            { id: 10, nama: 'Gula Pasir', satuan: '1/2kg', harga: 8000 },
+            { id: 11, nama: 'Bawang Merah', satuan: '1/4kg', harga: 10000 },
+            { id: 12, nama: 'Kacang Atom Garuda', satuan: 'pcs', harga: 2000 },
+        ];
+        let keranjang = [];
+
+        // ====================================================== //
+        //                SELEKSI ELEMEN DOM                      //
+        // ====================================================== //
+        const pages = document.querySelectorAll('.page');
+        const btnKeGudang = document.getElementById('btn-ke-gudang');
+        const btnKePengaturan = document.getElementById('btn-ke-pengaturan');
+        const btnKembaliKeAwal = document.getElementById('btn-kembali-ke-awal');
+        const btnKembaliKeGudang = document.getElementById('btn-kembali-ke-gudang');
+        
+        const searchKasir = document.getElementById('search-kasir');
+        const popupKasir = document.getElementById('popup-kasir');
+        const keranjangList = document.getElementById('keranjang-list');
+        const keranjangKosong = document.getElementById('keranjang-kosong');
+        const totalHargaElem = document.getElementById('total-harga');
+        const btnPratinjauStruk = document.getElementById('btn-pratinjau-struk');
+
+        const searchGudang = document.getElementById('search-gudang');
+        const listBarangGudang = document.getElementById('list-barang-gudang');
+
+        // Pengaturan: Tambah Barang
+        const formTambah = document.getElementById('form-tambah');
+        const tambahNamaBarang = document.getElementById('tambah-nama-barang');
+        const tambahHargaBarang = document.getElementById('tambah-harga-barang');
+        const tambahSatuanBarang = document.getElementById('tambah-satuan-barang');
+
+        // Pengaturan: Edit Barang
+        const searchEdit = document.getElementById('search-edit');
+        const popupEdit = document.getElementById('popup-edit');
+        const formEditContainer = document.getElementById('form-edit-container');
+        const formEdit = document.getElementById('form-edit');
+        const editItemId = document.getElementById('edit-item-id');
+        const editNamaBarang = document.getElementById('edit-nama-barang');
+        const editHargaBarang = document.getElementById('edit-harga-barang');
+        const editSatuanBarang = document.getElementById('edit-satuan-barang');
+        
+        const notification = document.getElementById('notification');
+
+        // Modal Elements
+        const modalPratinjau = document.getElementById('modal-pratinjau');
+        const pratinjauStrukContent = document.getElementById('pratinjau-struk-content');
+        const btnTutupModal = document.getElementById('btn-tutup-modal');
+        const btnKonfirmasiCetak = document.getElementById('btn-konfirmasi-cetak');
+
+        // ====================================================== //
+        //                  FUNGSI-FUNGSI BANTU                   //
+        // ====================================================== //
+
+        const formatRupiah = (angka) => {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+        };
+        
+        const formatAngka = (angka) => {
+             return new Intl.NumberFormat('id-ID').format(angka);
+        }
+
+        function showNotification(message, type = 'success') {
+            notification.textContent = message;
+            notification.className = `bg-${type} show`;
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function showPage(pageId) {
+            pages.forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+        }
+
+        // ====================================================== //
+        //                  FUNGSI-FUNGSI RENDER                  //
+        // ====================================================== //
+
+        function renderGudang(filter = '') {
+            listBarangGudang.innerHTML = '';
+            const filteredGudang = gudang.filter(item => 
+                item.nama.toLowerCase().includes(filter.toLowerCase())
+            );
+
+            if (filteredGudang.length === 0) {
+                listBarangGudang.innerHTML = `<p class="text-gray-500 text-center">Barang tidak ditemukan.</p>`;
+                return;
+            }
+
+            filteredGudang.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'bg-white p-4 rounded-lg shadow flex justify-between items-center';
+                itemDiv.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-gray-800">${item.nama}</p>
+                        <p class="text-sm text-gray-500">Satuan: ${item.satuan}</p>
+                    </div>
+                    <p class="font-semibold text-gray-700">${formatRupiah(item.harga)}</p>
+                `;
+                listBarangGudang.appendChild(itemDiv);
+            });
+        }
+        
+        function renderSearchPopup(popupElement, filter) {
+             const filteredGudang = gudang.filter(item => 
+                item.nama.toLowerCase().includes(filter.toLowerCase())
+            );
+            popupElement.innerHTML = '';
+
+            if (filter && filteredGudang.length > 0) {
+                popupElement.classList.remove('hidden');
+                filteredGudang.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'p-3 hover:bg-gray-100 cursor-pointer';
+                    itemDiv.textContent = `${item.nama} (${formatRupiah(item.harga)})`;
+                    itemDiv.dataset.itemId = item.id;
+                    popupElement.appendChild(itemDiv);
+                });
+            } else {
+                popupElement.classList.add('hidden');
+            }
+        }
+
+        function renderKeranjang() {
+            keranjangList.innerHTML = '';
+            let totalKeseluruhan = 0;
+
+            if (keranjang.length === 0) {
+                keranjangList.appendChild(keranjangKosong);
+                keranjangKosong.style.display = 'block';
+                btnPratinjauStruk.disabled = true;
+                btnPratinjauStruk.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                keranjangKosong.style.display = 'none';
+                btnPratinjauStruk.disabled = false;
+                btnPratinjauStruk.classList.remove('opacity-50', 'cursor-not-allowed');
+                keranjang.forEach(item => {
+                    const subtotal = item.harga * item.kuantitas;
+                    totalKeseluruhan += subtotal;
+
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'flex justify-between items-center py-2 border-b last:border-b-0';
+                    itemDiv.innerHTML = `
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800">${item.nama}</p>
+                            <p class="text-sm text-gray-500">${formatRupiah(item.harga)} / ${item.satuan}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button data-id="${item.id}" class="btn-kurang bg-red-100 text-red-600 font-bold w-7 h-7 rounded-full hover:bg-red-200 transition">-</button>
+                            <span class="w-8 text-center font-medium">${item.kuantitas}</span>
+                            <button data-id="${item.id}" class="btn-tambah bg-green-100 text-green-600 font-bold w-7 h-7 rounded-full hover:bg-green-200 transition">+</button>
+                        </div>
+                        <div class="w-28 text-right font-semibold text-gray-700">
+                            ${formatRupiah(subtotal)}
+                        </div>
+                    `;
+                    keranjangList.appendChild(itemDiv);
+                });
+            }
+            totalHargaElem.textContent = formatRupiah(totalKeseluruhan);
+        }
+        
+        // ====================================================== //
+        //                   FUNGSI STRUK & MODAL                 //
+        // ====================================================== //
+        function generateStrukHTML() {
+            const now = new Date();
+            const timestamp = now.toLocaleString('id-ID', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+
+            let itemsHtml = keranjang.map(item => `
+                <tr>
+                    <td colspan="3" class="pt-1">${item.nama}</td>
+                </tr>
+                <tr>
+                    <td class="text-left">${item.kuantitas}&nbsp;x&nbsp;${formatAngka(item.harga)}</td>
+                    <td></td>
+                    <td class="text-right">${formatAngka(item.kuantitas * item.harga)}</td>
+                </tr>
+            `).join('');
+
+            const total = keranjang.reduce((sum, item) => sum + (item.kuantitas * item.harga), 0);
+
+            return `
+                <div class="text-center mb-2">
+                    <h3 class="font-bold text-base">Ayesha</h3>
+                    <p>Daftar Belanja</p>
+                    <p>${timestamp}</p>
+                </div>
+                <table class="w-full">
+                    <thead>
+                        <tr>
+                           <td colspan="3" class="border-t-2 border-dashed border-black"></td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsHtml}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="border-t-2 border-dashed border-black pt-1"></td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold text-left text-sm">TOTAL</td>
+                            <td></td>
+                            <td class="font-bold text-right text-sm">${formatAngka(total)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <div class="text-center mt-4">
+                    <p>Terima kasih telah berbelanja!</p>
+                </div>
+            `;
+        }
+        
+        function openPreviewModal() {
+            const receiptHtml = generateStrukHTML();
+            pratinjauStrukContent.innerHTML = receiptHtml;
+            modalPratinjau.classList.remove('hidden');
+        }
+
+        function closePreviewModal() {
+            modalPratinjau.classList.add('hidden');
+        }
+
+        function printReceipt() {
+            const receiptHtml = generateStrukHTML();
+            document.getElementById('struk-content').innerHTML = receiptHtml;
+            window.print();
+        }
+
+        // ====================================================== //
+        //                   EVENT LISTENERS                      //
+        // ====================================================== //
+
+        // Navigasi
+        btnKeGudang.addEventListener('click', () => showPage('halaman-gudang'));
+        btnKePengaturan.addEventListener('click', () => showPage('halaman-pengaturan'));
+        btnKembaliKeAwal.addEventListener('click', () => showPage('halaman-awal'));
+        btnKembaliKeGudang.addEventListener('click', () => {
+            showPage('halaman-gudang');
+            renderGudang();
+        });
+
+        // Pencarian di Halaman Awal (Kasir)
+        searchKasir.addEventListener('input', () => renderSearchPopup(popupKasir, searchKasir.value));
+
+        // Menambahkan barang ke keranjang dari popup
+        popupKasir.addEventListener('click', (e) => {
+            if (e.target.dataset.itemId) {
+                const itemId = parseInt(e.target.dataset.itemId);
+                const itemDiKeranjang = keranjang.find(i => i.id === itemId);
+
+                if (itemDiKeranjang) {
+                    itemDiKeranjang.kuantitas++;
+                } else {
+                    const itemDariGudang = gudang.find(i => i.id === itemId);
+                    keranjang.push({ ...itemDariGudang, kuantitas: 1 });
+                }
+                
+                renderKeranjang();
+                showNotification(`Barang ditambahkan ke keranjang.`, 'success');
+                searchKasir.value = '';
+                popupKasir.classList.add('hidden');
+            }
+        });
+        
+        // Mengubah kuantitas di keranjang (+/-)
+        keranjangList.addEventListener('click', (e) => {
+            const target = e.target;
+            const itemId = parseInt(target.dataset.id);
+            const itemDiKeranjang = keranjang.find(i => i.id === itemId);
+
+            if (!itemDiKeranjang) return;
+
+            if (target.classList.contains('btn-tambah')) {
+                itemDiKeranjang.kuantitas++;
+            } else if (target.classList.contains('btn-kurang')) {
+                itemDiKeranjang.kuantitas--;
+                if (itemDiKeranjang.kuantitas === 0) {
+                    keranjang = keranjang.filter(i => i.id !== itemId);
+                    showNotification(`"${itemDiKeranjang.nama}" dihapus dari keranjang.`, 'error');
+                }
+            }
+            renderKeranjang();
+        });
+        
+        // Event Listeners untuk Modal dan Cetak
+        btnPratinjauStruk.addEventListener('click', openPreviewModal);
+        btnTutupModal.addEventListener('click', closePreviewModal);
+        
+        btnKonfirmasiCetak.addEventListener('click', () => {
+            printReceipt();
+            closePreviewModal();
+            keranjang = [];
+            renderKeranjang();
+            showNotification('Transaksi berhasil, keranjang telah dikosongkan.', 'success');
+        });
+
+        modalPratinjau.addEventListener('click', (e) => {
+            if (e.target === modalPratinjau) {
+                closePreviewModal();
+            }
+        });
+
+        // Halaman Pengaturan: Tambah Barang
+        formTambah.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nama = tambahNamaBarang.value.trim();
+            const harga = parseInt(tambahHargaBarang.value);
+            const satuan = tambahSatuanBarang.value;
+
+            if (!nama || !harga || harga <= 0) {
+                showNotification('Nama dan harga barang harus diisi dengan benar.', 'error');
+                return;
+            }
+
+            const newId = gudang.length > 0 ? Math.max(...gudang.map(item => item.id)) + 1 : 1;
+
+            const newItem = { id: newId, nama, harga, satuan };
+            gudang.push(newItem);
+
+            showNotification(`Barang "${nama}" berhasil ditambahkan.`, 'success');
+            formTambah.reset();
+            renderGudang(); // Refresh daftar gudang di halaman lain
+        });
+
+        // Halaman Pengaturan: Edit Barang
+        searchGudang.addEventListener('input', () => renderGudang(searchGudang.value));
+        searchEdit.addEventListener('input', () => renderSearchPopup(popupEdit, searchEdit.value));
+
+        popupEdit.addEventListener('click', (e) => {
+            if (e.target.dataset.itemId) {
+                const itemId = parseInt(e.target.dataset.itemId);
+                const item = gudang.find(i => i.id === itemId);
+                if (item) {
+                    editItemId.value = item.id;
+                    editNamaBarang.value = item.nama;
+                    editHargaBarang.value = item.harga;
+                    editSatuanBarang.value = item.satuan;
+                    formEditContainer.classList.remove('hidden');
+                }
+                searchEdit.value = '';
+                popupEdit.classList.add('hidden');
+            }
+        });
+        
+        formEdit.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = parseInt(editItemId.value);
+            const nama = editNamaBarang.value.trim();
+            const harga = parseInt(editHargaBarang.value);
+            const satuan = editSatuanBarang.value;
+
+            if (!nama || !harga) {
+                showNotification('Nama dan harga barang tidak boleh kosong.', 'error');
+                return;
+            }
+
+            const itemIndex = gudang.findIndex(i => i.id === id);
+            if (itemIndex > -1) {
+                gudang[itemIndex] = { ...gudang[itemIndex], nama, harga, satuan };
+                showNotification('Data barang berhasil diperbarui.', 'success');
+                formEditContainer.classList.add('hidden');
+                formEdit.reset();
+                renderGudang();
+                renderKeranjang();
+            } else {
+                 showNotification('Terjadi kesalahan, barang tidak ditemukan.', 'error');
+            }
+        });
+
+        // Menyembunyikan popup jika klik di luar area
+        document.addEventListener('click', (e) => {
+            if (!searchKasir.contains(e.target) && !popupKasir.contains(e.target)) {
+                popupKasir.classList.add('hidden');
+            }
+            if (!searchEdit.contains(e.target) && !popupEdit.contains(e.target)) {
+                popupEdit.classList.add('hidden');
+            }
+        });
+
+        // ====================================================== //
+        //                      INISIALISASI                      //
+        // ====================================================== //
+        renderGudang();
+        renderKeranjang();
+        lucide.createIcons(); // Render semua ikon
+    });
+    </script>
+</body>
+</html>

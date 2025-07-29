@@ -304,6 +304,24 @@
             <div class="border rounded-md p-4 bg-gray-50 max-h-80 overflow-y-auto">
                 <div id="pratinjau-struk-content" class="font-mono text-xs"></div>
             </div>
+            
+            <!-- Input Uang Tunai dan Uang Kembali -->
+            <div class="mt-4 space-y-3">
+                <div>
+                    <label for="input-uang-tunai" class="block text-sm font-medium text-gray-700">Uang Tunai (Ribuan)</label>
+                    <div class="relative mt-1">
+                         <input type="number" id="input-uang-tunai" class="w-full p-2 border border-gray-300 rounded-lg pr-12" placeholder="Contoh: 50 untuk Rp 50.000">
+                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                            <span class="text-gray-500 sm:text-sm">,000</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center text-lg bg-gray-100 p-2 rounded-lg">
+                    <span class="font-semibold text-gray-800">Uang Kembali:</span>
+                    <span id="display-uang-kembali" class="font-bold text-green-600">Rp 0</span>
+                </div>
+            </div>
+
             <div class="flex justify-end gap-3 mt-6">
                 <button id="btn-tutup-modal" class="bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-400 transition">Tutup</button>
                 <button id="btn-konfirmasi-cetak" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
@@ -355,6 +373,7 @@
         let gudang = [];
         let keranjang = [];
         let laporanPenjualan = [];
+        let totalBelanjaSaatModalBuka = 0;
 
         const GUDANG_STORAGE_KEY = 'gudangDataApp';
         const LAPORAN_STORAGE_KEY = 'laporanPenjualanApp';
@@ -383,9 +402,8 @@
             if (dataTersimpan) {
                 gudang = JSON.parse(dataTersimpan);
             } else {
-                // Gunakan fungsi untuk mendapatkan data default
                 gudang = getDefaultGudangData();
-                simpanGudang(); // Simpan data default ke localStorage
+                simpanGudang();
             }
         }
         
@@ -447,6 +465,8 @@
         const pratinjauStrukContent = document.getElementById('pratinjau-struk-content');
         const btnTutupModal = document.getElementById('btn-tutup-modal');
         const btnKonfirmasiCetak = document.getElementById('btn-konfirmasi-cetak');
+        const inputUangTunai = document.getElementById('input-uang-tunai');
+        const displayUangKembali = document.getElementById('display-uang-kembali');
 
         // Pengaturan: Reset Data & Modal Konfirmasi
         const btnResetDataPenjualan = document.getElementById('btn-reset-data-penjualan');
@@ -571,7 +591,6 @@
             laporanListContainer.innerHTML = '';
             laporanRingkasanContainer.innerHTML = '';
 
-            // Hitung dan tampilkan total pendapatan
             const totalPendapatan = laporanPenjualan.reduce((total, trx) => total + trx.total, 0);
             laporanRingkasanContainer.innerHTML = `
                 <h3 class="text-xl font-bold text-gray-800">Total Pendapatan</h3>
@@ -583,7 +602,6 @@
                 return;
             }
             
-            // Tampilkan dari yang terbaru
             const reversedLaporan = [...laporanPenjualan].reverse();
 
             reversedLaporan.forEach(trx => {
@@ -623,7 +641,7 @@
         // ====================================================== //
         //                   FUNGSI STRUK & MODAL                 //
         // ====================================================== //
-        function generateStrukHTML() {
+        function generateStrukHTML(total, uangTunai, uangKembali) {
             const now = new Date();
             const timestamp = now.toLocaleString('id-ID', {
                 day: '2-digit', month: '2-digit', year: 'numeric',
@@ -641,7 +659,24 @@
                 </tr>
             `).join('');
 
-            const total = keranjang.reduce((sum, item) => sum + (item.kuantitas * item.harga), 0);
+            let paymentHtml = '';
+            if (typeof uangTunai !== 'undefined' && uangTunai >= total && total > 0) {
+                paymentHtml = `
+                    <tr>
+                        <td colspan="3" class="border-t-2 border-dashed border-black pt-1"></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-left text-sm">TUNAI</td>
+                        <td></td>
+                        <td class="font-bold text-right text-sm">${formatAngka(uangTunai)}</td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-left text-sm">KEMBALI</td>
+                        <td></td>
+                        <td class="font-bold text-right text-sm">${formatAngka(uangKembali)}</td>
+                    </tr>
+                `;
+            }
 
             return `
                 <div class="text-center mb-2">
@@ -667,6 +702,7 @@
                             <td></td>
                             <td class="font-bold text-right text-sm">${formatAngka(total)}</td>
                         </tr>
+                        ${paymentHtml}
                     </tfoot>
                 </table>
                 <div class="text-center mt-4">
@@ -676,8 +712,16 @@
         }
         
         function openPreviewModal() {
-            const receiptHtml = generateStrukHTML();
+            totalBelanjaSaatModalBuka = keranjang.reduce((sum, item) => sum + (item.kuantitas * item.harga), 0);
+            const receiptHtml = generateStrukHTML(totalBelanjaSaatModalBuka);
             pratinjauStrukContent.innerHTML = receiptHtml;
+
+            // Reset fields
+            inputUangTunai.value = '';
+            displayUangKembali.textContent = formatRupiah(0);
+            displayUangKembali.classList.remove('text-red-600');
+            displayUangKembali.classList.add('text-green-600');
+
             modalPratinjau.classList.remove('hidden');
         }
 
@@ -686,7 +730,12 @@
         }
 
         function printReceipt() {
-            const receiptHtml = generateStrukHTML();
+            const total = keranjang.reduce((sum, item) => sum + (item.kuantitas * item.harga), 0);
+            const nilaiInput = parseFloat(inputUangTunai.value) || 0;
+            const uangTunai = nilaiInput * 1000;
+            const uangKembali = uangTunai - total;
+            
+            const receiptHtml = generateStrukHTML(total, uangTunai, uangKembali);
             document.getElementById('struk-content').innerHTML = receiptHtml;
             window.print();
         }
@@ -756,8 +805,26 @@
         btnPratinjauStruk.addEventListener('click', openPreviewModal);
         btnTutupModal.addEventListener('click', closePreviewModal);
         
+        inputUangTunai.addEventListener('input', () => {
+            const nilaiInput = parseFloat(inputUangTunai.value) || 0;
+            const uangTunai = nilaiInput * 1000;
+            const kembali = uangTunai - totalBelanjaSaatModalBuka;
+
+            displayUangKembali.textContent = formatRupiah(kembali);
+
+            if (kembali < 0) {
+                displayUangKembali.classList.remove('text-green-600');
+                displayUangKembali.classList.add('text-red-600');
+            } else {
+                displayUangKembali.classList.remove('text-red-600');
+                displayUangKembali.classList.add('text-green-600');
+            }
+            
+            const receiptHtml = generateStrukHTML(totalBelanjaSaatModalBuka, uangTunai, kembali);
+            pratinjauStrukContent.innerHTML = receiptHtml;
+        });
+
         btnKonfirmasiCetak.addEventListener('click', () => {
-            // Simpan transaksi sebelum mencetak
             const total = keranjang.reduce((sum, item) => sum + (item.kuantitas * item.harga), 0);
             const newTransaction = {
                 id: Date.now(),
@@ -768,7 +835,6 @@
             laporanPenjualan.push(newTransaction);
             simpanLaporan();
 
-            // Lanjutkan proses
             printReceipt();
             closePreviewModal();
             keranjang = [];
@@ -806,14 +872,13 @@
             }
 
             const newId = gudang.length > 0 ? Math.max(...gudang.map(item => item.id)) + 1 : 1;
-
             const newItem = { id: newId, nama, harga, satuan };
             gudang.push(newItem);
-            simpanGudang(); // Simpan ke localStorage
+            simpanGudang();
 
             showNotification(`Barang "${nama}" berhasil ditambahkan.`, 'success');
             formTambah.reset();
-            renderGudang(); // Refresh daftar gudang di halaman lain
+            renderGudang();
         });
 
         // Halaman Pengaturan: Edit Barang
@@ -851,7 +916,7 @@
             const itemIndex = gudang.findIndex(i => i.id === id);
             if (itemIndex > -1) {
                 gudang[itemIndex] = { ...gudang[itemIndex], nama, harga, satuan };
-                simpanGudang(); // Simpan ke localStorage
+                simpanGudang();
                 showNotification('Data barang berhasil diperbarui.', 'success');
                 formEditContainer.classList.add('hidden');
                 formEdit.reset();
@@ -877,24 +942,16 @@
             }
         });
 
-        // === FUNGSI RESET YANG DIPERBAIKI SESUAI PERMINTAAN ===
         btnKonfirmasiReset.addEventListener('click', () => {
-            // 1. Hapus HANYA riwayat penjualan dari localStorage
             localStorage.removeItem(LAPORAN_STORAGE_KEY);
-
-            // 2. Atur ulang state riwayat penjualan dan keranjang di memori
             laporanPenjualan = [];
-            keranjang = []; // Keranjang juga dikosongkan untuk konsistensi
+            keranjang = [];
             
-            // Data barang (gudang) TIDAK diubah
-
-            // 3. Render ulang tampilan yang relevan
             renderKeranjang();
             if (document.getElementById('halaman-laporan').classList.contains('active')) {
                 renderLaporan();
             }
             
-            // 4. Tutup modal dan beri notifikasi yang sesuai
             modalKonfirmasiReset.classList.add('hidden');
             showNotification('Riwayat penjualan berhasil direset.', 'success');
         });
@@ -913,11 +970,11 @@
         // ====================================================== //
         //                      INISIALISASI                      //
         // ====================================================== //
-        muatGudang(); // Muat data gudang dari localStorage saat aplikasi dimulai
-        muatLaporan(); // Muat data laporan dari localStorage
+        muatGudang();
+        muatLaporan();
         renderGudang();
         renderKeranjang();
-        lucide.createIcons(); // Render semua ikon
+        lucide.createIcons();
     });
     </script>
 </body>

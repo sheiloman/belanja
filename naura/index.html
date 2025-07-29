@@ -54,22 +54,31 @@
 
         /* CSS KHUSUS UNTUK PRINT STRUK */
         @media print {
+            body {
+                /* Hapus latar belakang biru saat mencetak */
+                background-color: #fff !important;
+            }
             /* Sembunyikan semua elemen kecuali kontainer struk */
             body > *:not(#struk-container) {
                 display: none;
             }
-            /* Pastikan kontainer struk terlihat dan menempati seluruh halaman */
+            /* Pastikan kontainer struk terlihat */
             #struk-container {
                 display: block !important;
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
             }
-            /* Atur agar tidak ada margin dari browser */
+            #struk-content {
+                /* Atur gaya struk agar jelas di kertas A4/Letter */
+                font-size: 12pt; /* Ukuran font yang lebih besar dan jelas */
+                line-height: 1.5;
+                color: #000;
+                /* Batasi lebar struk agar tidak melebar dan pusatkan */
+                width: 85mm;
+                margin: 0 auto;
+            }
             @page {
-                margin: 10mm;
-                size: 80mm auto; /* Ukuran kertas thermal printer umum */
+                /* Hapus ukuran kertas agar sesuai default browser (A4/Letter) */
+                /* size: 80mm auto; */
+                margin: 15mm;
             }
         }
     </style>
@@ -134,11 +143,11 @@
         <!-- ====================================================== -->
         <div id="halaman-gudang" class="page space-y-6">
             <header class="flex justify-between items-center pb-4 border-b border-gray-300">
-                 <button id="btn-kembali-ke-awal-dari-gudang" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-300">
-                    &larr; Kembali
+                 <button id="btn-kembali-ke-awal-dari-gudang" title="Kembali ke Kasir" class="p-2 rounded-full hover:bg-gray-200 transition duration-300">
+                    <i data-lucide="arrow-left-circle" class="text-gray-600"></i>
                 </button>
                 <h1 class="text-3xl font-bold text-sky-800">Gudang Barang</h1>
-                <button id="btn-ke-pengaturan" class="p-2 rounded-full hover:bg-gray-200 transition duration-300">
+                <button id="btn-ke-pengaturan" title="Pengaturan" class="p-2 rounded-full hover:bg-gray-200 transition duration-300">
                     <i data-lucide="settings" class="text-gray-600"></i>
                 </button>
             </header>
@@ -157,10 +166,11 @@
         <!-- ====================================================== -->
         <div id="halaman-pengaturan" class="page space-y-6">
             <header class="flex justify-between items-center pb-4 border-b border-gray-300">
-                <h1 class="text-3xl font-bold text-sky-800">Pengaturan Barang</h1>
-                <button id="btn-kembali-ke-gudang" class="bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-700 transition duration-300">
-                    Kembali ke Gudang
+                <button id="btn-kembali-ke-gudang" title="Kembali ke Gudang" class="p-2 rounded-full hover:bg-gray-200 transition duration-300">
+                    <i data-lucide="arrow-left-circle" class="text-gray-600"></i>
                 </button>
+                <h1 class="text-3xl font-bold text-sky-800">Pengaturan</h1>
+                <div class="w-10"></div> <!-- Spacer untuk menengahkan judul -->
             </header>
 
             <!-- Form Tambah Barang Baru -->
@@ -249,6 +259,18 @@
                     </form>
                 </div>
             </div>
+
+            <!-- Zona Berbahaya - Reset Data -->
+            <div class="mt-10 pt-6 border-t-2 border-dashed border-red-300">
+                <h3 class="text-xl font-semibold mb-4 text-red-700">Zona Berbahaya</h3>
+                <div class="bg-red-50 p-6 rounded-lg border border-red-200">
+                    <p class="text-gray-700 mb-4">Tindakan ini akan menghapus semua riwayat penjualan secara permanen. Data barang Anda tidak akan terpengaruh. Tindakan ini tidak dapat diurungkan.</p>
+                    <button id="btn-reset-data-penjualan" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-red-700 transition duration-300 flex items-center gap-2">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                        Reset Riwayat Penjualan
+                    </button>
+                </div>
+            </div>
         </div>
         
         <!-- ====================================================== -->
@@ -256,10 +278,11 @@
         <!-- ====================================================== -->
         <div id="halaman-laporan" class="page space-y-6">
             <header class="flex justify-between items-center pb-4 border-b border-gray-300">
-                <h1 class="text-3xl font-bold text-sky-800">Laporan Penjualan</h1>
-                <button id="btn-kembali-ke-awal-dari-laporan" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-300">
-                    &larr; Kembali ke Kasir
+                <button id="btn-kembali-ke-awal-dari-laporan" title="Kembali ke Kasir" class="p-2 rounded-full hover:bg-gray-200 transition duration-300">
+                    <i data-lucide="arrow-left-circle" class="text-gray-600"></i>
                 </button>
+                <h1 class="text-3xl font-bold text-sky-800">Laporan Penjualan</h1>
+                <div class="w-10"></div> <!-- Spacer untuk menengahkan judul -->
             </header>
             
             <!-- Bagian Ringkasan Total Penjualan -->
@@ -291,9 +314,36 @@
         </div>
     </div>
 
+    <!-- MODAL KONFIRMASI RESET -->
+    <div id="modal-konfirmasi-reset" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div class="flex items-start">
+                <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <i data-lucide="alert-triangle" class="h-6 w-6 text-red-600"></i>
+                </div>
+                <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Reset Riwayat Penjualan?</h3>
+                    <div class="mt-2">
+                        <p class="text-sm text-gray-500">
+                            Apakah Anda benar-benar yakin? Semua riwayat penjualan akan dihapus secara permanen. Tindakan ini tidak akan menghapus data barang Anda.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                <button id="btn-konfirmasi-reset" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                    Ya, Hapus Riwayat
+                </button>
+                <button id="btn-batal-reset" type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm">
+                    Batal
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- STRUK UNTUK DICETAK -->
     <div id="struk-container" class="hidden">
-        <div id="struk-content" class="font-mono text-xs bg-white"></div>
+        <div id="struk-content" class="font-mono bg-white"></div>
     </div>
 
 
@@ -308,6 +358,14 @@
 
         const GUDANG_STORAGE_KEY = 'gudangDataApp';
         const LAPORAN_STORAGE_KEY = 'laporanPenjualanApp';
+
+        // Fungsi untuk mendapatkan data barang default
+        function getDefaultGudangData() {
+            return [
+                { id: 1, nama: 'Indomie Goreng Original', satuan: 'dus', harga: 95000 },
+                { id: 2, nama: 'Teh Botol Sosro Kotak', satuan: 'dus', harga: 65000 },
+            ];
+        }
 
         // Fungsi untuk menyimpan data gudang ke localStorage
         function simpanGudang() {
@@ -325,11 +383,8 @@
             if (dataTersimpan) {
                 gudang = JSON.parse(dataTersimpan);
             } else {
-                // Data default jika localStorage kosong (untuk pengguna pertama kali)
-                gudang = [
-                    { id: 1, nama: 'Indomie Goreng Original', satuan: 'dus', harga: 95000 },
-                    { id: 2, nama: 'Teh Botol Sosro Kotak', satuan: 'dus', harga: 65000 },
-                ];
+                // Gunakan fungsi untuk mendapatkan data default
+                gudang = getDefaultGudangData();
                 simpanGudang(); // Simpan data default ke localStorage
             }
         }
@@ -339,6 +394,8 @@
             const dataTersimpan = localStorage.getItem(LAPORAN_STORAGE_KEY);
             if (dataTersimpan) {
                 laporanPenjualan = JSON.parse(dataTersimpan);
+            } else {
+                laporanPenjualan = [];
             }
         }
 
@@ -385,11 +442,17 @@
         
         const notification = document.getElementById('notification');
 
-        // Modal Elements
+        // Modal Pratinjau Struk
         const modalPratinjau = document.getElementById('modal-pratinjau');
         const pratinjauStrukContent = document.getElementById('pratinjau-struk-content');
         const btnTutupModal = document.getElementById('btn-tutup-modal');
         const btnKonfirmasiCetak = document.getElementById('btn-konfirmasi-cetak');
+
+        // Pengaturan: Reset Data & Modal Konfirmasi
+        const btnResetDataPenjualan = document.getElementById('btn-reset-data-penjualan');
+        const modalKonfirmasiReset = document.getElementById('modal-konfirmasi-reset');
+        const btnKonfirmasiReset = document.getElementById('btn-konfirmasi-reset');
+        const btnBatalReset = document.getElementById('btn-batal-reset');
 
         // ====================================================== //
         //                  FUNGSI-FUNGSI BANTU                   //
@@ -582,8 +645,8 @@
 
             return `
                 <div class="text-center mb-2">
-                    <h3 class="font-bold text-base">TOKO SEMBAKO</h3>
-                    <p>Jl. Merdeka, Simpang 3 Pasar Hilir</p>
+                    <h3 class="font-bold text-base">TOKO MAMA RISKI</h3>
+                    <p>Jl. Merdeka, Simpang Tiga Pasar Hilir</p>
                     <p>${timestamp}</p>
                 </div>
                 <table class="w-full">
@@ -607,7 +670,7 @@
                     </tfoot>
                 </table>
                 <div class="text-center mt-4">
-                    <p>Terima kasih telah berbelanja!</p>
+                    <p>Terima kasih sudah berbelanja!</p>
                 </div>
             `;
         }
@@ -798,6 +861,44 @@
                  showNotification('Terjadi kesalahan, barang tidak ditemukan.', 'error');
             }
         });
+
+        // Halaman Pengaturan: Reset Data Penjualan
+        btnResetDataPenjualan.addEventListener('click', () => {
+            modalKonfirmasiReset.classList.remove('hidden');
+        });
+
+        btnBatalReset.addEventListener('click', () => {
+            modalKonfirmasiReset.classList.add('hidden');
+        });
+
+        modalKonfirmasiReset.addEventListener('click', (e) => {
+            if (e.target === modalKonfirmasiReset) {
+                modalKonfirmasiReset.classList.add('hidden');
+            }
+        });
+
+        // === FUNGSI RESET YANG DIPERBAIKI SESUAI PERMINTAAN ===
+        btnKonfirmasiReset.addEventListener('click', () => {
+            // 1. Hapus HANYA riwayat penjualan dari localStorage
+            localStorage.removeItem(LAPORAN_STORAGE_KEY);
+
+            // 2. Atur ulang state riwayat penjualan dan keranjang di memori
+            laporanPenjualan = [];
+            keranjang = []; // Keranjang juga dikosongkan untuk konsistensi
+            
+            // Data barang (gudang) TIDAK diubah
+
+            // 3. Render ulang tampilan yang relevan
+            renderKeranjang();
+            if (document.getElementById('halaman-laporan').classList.contains('active')) {
+                renderLaporan();
+            }
+            
+            // 4. Tutup modal dan beri notifikasi yang sesuai
+            modalKonfirmasiReset.classList.add('hidden');
+            showNotification('Riwayat penjualan berhasil direset.', 'success');
+        });
+
 
         // Menyembunyikan popup jika klik di luar area
         document.addEventListener('click', (e) => {

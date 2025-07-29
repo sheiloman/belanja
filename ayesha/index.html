@@ -271,23 +271,42 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         // ====================================================== //
-        //                  DATA SIMULASI & STATE                   //
+        //                  DATA & LOCAL STORAGE                  //
         // ====================================================== //
-        let gudang = [
-            { id: 1, nama: 'Indomie Goreng Original', satuan: 'dus', harga: 95000 },
-            { id: 2, nama: 'Susu Ultra Coklat 250ml', satuan: 'dus', harga: 120000 },
-            { id: 3, nama: 'Kopi Kapal Api Special Mix', satuan: 'renteng', harga: 13000 },
-            { id: 4, nama: 'Minyak Goreng Sania 1L', satuan: 'liter', harga: 18000 },
-            { id: 5, nama: 'Teh Botol Sosro Kotak', satuan: 'dus', harga: 65000 },
-            { id: 6, nama: 'Coca-cola 1.5L', satuan: 'botol', harga: 15000 },
-            { id: 7, nama: 'Sarden ABC', satuan: 'kaleng', harga: 9000 },
-            { id: 8, nama: 'Beras Pandan Wangi', satuan: 'kg', harga: 14000 },
-            { id: 9, nama: 'Telur Ayam Negeri', satuan: 'kg', harga: 28000 },
-            { id: 10, nama: 'Gula Pasir', satuan: '1/2kg', harga: 8000 },
-            { id: 11, nama: 'Bawang Merah', satuan: '1/4kg', harga: 10000 },
-            { id: 12, nama: 'Kacang Atom Garuda', satuan: 'pcs', harga: 2000 },
-        ];
+        let gudang = [];
         let keranjang = [];
+        const GUDANG_STORAGE_KEY = 'gudangDataApp';
+
+        // Fungsi untuk menyimpan data gudang ke localStorage
+        function simpanGudang() {
+            localStorage.setItem(GUDANG_STORAGE_KEY, JSON.stringify(gudang));
+        }
+
+        // Fungsi untuk memuat data gudang dari localStorage
+        function muatGudang() {
+            const dataTersimpan = localStorage.getItem(GUDANG_STORAGE_KEY);
+            if (dataTersimpan) {
+                gudang = JSON.parse(dataTersimpan);
+            } else {
+                // Data default jika localStorage kosong (untuk pengguna pertama kali)
+                gudang = [
+                    { id: 1, nama: 'Indomie Goreng Original', satuan: 'dus', harga: 95000 },
+                    { id: 2, nama: 'Susu Ultra Coklat 250ml', satuan: 'dus', harga: 120000 },
+                    { id: 3, nama: 'Kopi Kapal Api Special Mix', satuan: 'renteng', harga: 13000 },
+                    { id: 4, nama: 'Minyak Goreng Sania 1L', satuan: 'liter', harga: 18000 },
+                    { id: 5, nama: 'Teh Botol Sosro Kotak', satuan: 'dus', harga: 65000 },
+                    { id: 6, nama: 'Coca-cola 1.5L', satuan: 'botol', harga: 15000 },
+                    { id: 7, nama: 'Sarden ABC', satuan: 'kaleng', harga: 9000 },
+                    { id: 8, nama: 'Beras Pandan Wangi', satuan: 'kg', harga: 14000 },
+                    { id: 9, nama: 'Telur Ayam Negeri', satuan: 'kg', harga: 28000 },
+                    { id: 10, nama: 'Gula Pasir', satuan: '1/2kg', harga: 8000 },
+                    { id: 11, nama: 'Bawang Merah', satuan: '1/4kg', harga: 10000 },
+                    { id: 12, nama: 'Kacang Atom Garuda', satuan: 'pcs', harga: 2000 },
+                ];
+                simpanGudang(); // Simpan data default ke localStorage
+            }
+        }
+
 
         // ====================================================== //
         //                SELEKSI ELEMEN DOM                      //
@@ -470,8 +489,8 @@
 
             return `
                 <div class="text-center mb-2">
-                    <h3 class="font-bold text-base">Ayesha</h3>
-                    <p>Daftar Belanja</p>
+                    <h3 class="font-bold text-base">TOKO KITA</h3>
+                    <p>Jl. Pembangunan No. 1, Kota Jaya</p>
                     <p>${timestamp}</p>
                 </div>
                 <table class="w-full">
@@ -606,6 +625,7 @@
 
             const newItem = { id: newId, nama, harga, satuan };
             gudang.push(newItem);
+            simpanGudang(); // Simpan ke localStorage
 
             showNotification(`Barang "${nama}" berhasil ditambahkan.`, 'success');
             formTambah.reset();
@@ -647,6 +667,7 @@
             const itemIndex = gudang.findIndex(i => i.id === id);
             if (itemIndex > -1) {
                 gudang[itemIndex] = { ...gudang[itemIndex], nama, harga, satuan };
+                simpanGudang(); // Simpan ke localStorage
                 showNotification('Data barang berhasil diperbarui.', 'success');
                 formEditContainer.classList.add('hidden');
                 formEdit.reset();
@@ -670,6 +691,7 @@
         // ====================================================== //
         //                      INISIALISASI                      //
         // ====================================================== //
+        muatGudang(); // Muat data dari localStorage saat aplikasi dimulai
         renderGudang();
         renderKeranjang();
         lucide.createIcons(); // Render semua ikon
